@@ -10,10 +10,10 @@ object Display {
 	var windowID: Long = 0
 	val sync = Sync()
 
-	var fps = 60
+	var targetFPS = 60
 
 	fun init(fps: Int, width: Int, height: Int, title: String) {
-		this.fps = fps
+		this.targetFPS = fps
 
 		// Setup an error callback. The default implementation
 		// will print the error message in System.err.
@@ -79,6 +79,10 @@ object Display {
 		GLFW.glfwSetErrorCallback(null)!!.free()
 	}
 
+	var delta: Float = 0f
+	var fps: Int = 0
+	private var lastFrameTime: Long = 0L
+
 	fun render(f: () -> Unit) {
 		glClearColor(0.2f, 0.3f, 0.8f, 0.0f)
 
@@ -91,8 +95,15 @@ object Display {
 
 			f()
 
-			sync.sync(fps)
-			GLFW.glfwSwapBuffers(windowID) // swap the color buffers
+			sync.sync(targetFPS)
+
+			val currentFrameTime: Long = System.nanoTime()
+			delta = (currentFrameTime - lastFrameTime) / 1000f
+			lastFrameTime = currentFrameTime
+
+			fps = (1 / delta).toInt()
+
+			GLFW.glfwSwapBuffers(windowID)
 			GLFW.glfwPollEvents()
 		}
 	}
