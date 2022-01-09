@@ -1,79 +1,47 @@
+import math.Matrix4f
+import math.Vector3f
 import org.lwjgl.BufferUtils
 import org.lwjgl.opengl.GL30.*
 import org.lwjgl.stb.STBImage.stbi_image_free
 import org.lwjgl.stb.STBImage.stbi_load
-import java.io.File
-import kotlin.system.exitProcess
-
-object Shader {
-	val vertex = "vert.glsl"
-	val fragment = "frag.glsl"
-
-	val programID: Int
-	val vertexID: Int
-	val fragmentID: Int
-
-	init {
-		vertexID = loadShader(vertex, GL_VERTEX_SHADER)
-		fragmentID = loadShader(fragment, GL_FRAGMENT_SHADER)
-
-		programID = glCreateProgram()
-		glAttachShader(programID, vertexID)
-		glAttachShader(programID, fragmentID)
-
-		bindAttribute(0, "position")
-		bindAttribute(1, "texture_coords")
-
-		glLinkProgram(programID)
-		glValidateProgram(programID)
-	}
-
-	fun start() {
-		glUseProgram(programID)
-	}
-
-	fun stop() {
-		glUseProgram(0)
-	}
-
-	fun destroy() {
-		stop()
-		glDetachShader(programID, vertexID)
-		glDetachShader(programID, fragmentID)
-		glDeleteShader(vertexID)
-		glDeleteShader(fragmentID)
-		glDeleteProgram(programID)
-	}
-
-	fun bindAttribute(attribute: Int, variableName: String) {
-		glBindAttribLocation(programID, attribute, variableName)
-	}
-
-	private fun loadShader(path: String, type: Int): Int {
-		println("Loading shader: $path")
-		val source = File(path).readText()
-		val id = glCreateShader(type)
-		glShaderSource(id, source)
-		glCompileShader(id)
-
-		if (glGetShaderi(id, GL_COMPILE_STATUS) == GL_FALSE) {
-			println(glGetShaderInfoLog(id, 500))
-			println("Could not compile shader.")
-			exitProcess(-1)
-		}
-
-		return id
-	}
-}
+import java.util.stream.Collectors
+import java.util.stream.Collectors.groupingBy
 
 fun main(args: Array<String>) {
 	Display.init(60, 500, 500, "You see it all in 3D")
 
 	val mesh = loadObjFile("mario.obj")
+
+	val mesh2 = Mesh(
+		indices = intArrayOf(0, 1, 2),
+		vertices = floatArrayOf(
+			0f, 0f, 0f,
+			0f, 0.5f, 0f,
+			0.5f, 0.5f, 0f,
+		),
+		texture = null, textureCoords = null, normals = floatArrayOf(), name = "cube"
+	)
+
+	val entities = mapOf(
+//		mesh to Entity(mesh),
+		mesh2 to Entity(mesh2)
+	)
+
 	Display.render {
 		Shader.start()
-		mesh.draw()
+
+		for ((mesh, ent) in entities) {
+			Shader.setMatrixUniform(
+				"transform_mat",
+				createTransformationMatrix(ent.position, ent.rotation.x, ent.rotation.y, ent.rotation.z, 0.1f)
+			)
+			mesh.draw()
+		}
+
+//		println(Display.fps)
 		Shader.stop()
+
+		entities.values.forEach { e -> e.position.x += Display.delta * 0.5f; println(e.position) }
 	}
 	Display.destroy()
 	Shader.destroy()
@@ -96,6 +64,12 @@ class Texture(path: String) {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width.get(), height.get(), 0, GL_RGBA, GL_UNSIGNED_BYTE, data)
 		stbi_image_free(data)
 	}
+}
+
+class Entity(val mesh: Mesh) {
+	val position = Vector3f()
+	val rotation = Vector3f()
+	val scale = Vector3f()
 }
 
 class Mesh(
@@ -127,12 +101,13 @@ class Mesh(
 		glEnableVertexAttribArray(0)
 		glEnableVertexAttribArray(1)
 		glEnableVertexAttribArray(2)
-		glActiveTexture(GL_TEXTURE)
 
 		texture?.let {
+			glActiveTexture(GL_TEXTURE)
 			glBindTexture(GL_TEXTURE_2D, texture.id)
 		}
-		glDrawElements(GL_TRIANGLES, this.vertexCount, GL_UNSIGNED_INT, 0)
+
+		glDrawElements(GL_TRIANGLES, this.vertexCount, GL_UNSIGNED_INT, 0L)
 		glDisableVertexAttribArray(0)
 		glDisableVertexAttribArray(1)
 		glDisableVertexAttribArray(2)
@@ -164,34 +139,3 @@ class Mesh(
 	}
 }
 
-val meshes = mutableMapOf<String, Mesh>()
-val textures = mutableMapOf<String, Texture>()
-
-fun loadObjFile(file: String): Mesh {
-	val vertices = mutableListOf<Float>()
-	val indices = mutableListOf<Int>()
-	val normals = mutableListOf<Float>()
-
-	val file = File(file)
-	file.forEachLine { line ->
-		val parts = line.split(" ")
-		if (parts[0] == "v") {
-			vertices.addAll(parts[1].toFloat(), parts[2].toFloat(), parts[3].toFloat())
-		} else if (parts[0] == "f") {
-			indices.addAll(parts[1].toInt(), parts[2].toInt(), parts[3].toInt())
-		}else if (parts[0] == "vn") {
-			normals.addAll(parts[1].toFloat(), parts[2].toFloat(), parts[3].toFloat())
-		}
-	}
-
-	val mesh = Mesh(
-		file.nameWithoutExtension, indices.toIntArray(), vertices.toFloatArray(), normals.toFloatArray(), null, null
-	)
-	meshes[file.nameWithoutExtension] = mesh
-
-	return mesh
-}
-
-private fun <E> MutableList<E>.addAll(vararg values: E) {
-	addAll(values)
-}

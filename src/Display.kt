@@ -2,6 +2,7 @@ import org.lwjgl.glfw.Callbacks
 import org.lwjgl.glfw.GLFW
 import org.lwjgl.glfw.GLFWErrorCallback
 import org.lwjgl.opengl.GL
+import org.lwjgl.opengl.GL11
 import org.lwjgl.opengl.GL11.*
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil
@@ -81,24 +82,26 @@ object Display {
 
 	var delta: Float = 0f
 	var fps: Int = 0
-	private var lastFrameTime: Long = 0L
+	private var lastFrameTime: Long = -1L
 
 	fun render(f: () -> Unit) {
-		glClearColor(0.2f, 0.3f, 0.8f, 0.0f)
-
-		glEnable(GL_DEPTH_TEST)
 
 		// Run the rendering loop until the user has attempted to close
 		// the window or has pressed the ESCAPE key.
 		while (!GLFW.glfwWindowShouldClose(windowID)) {
+			glEnable(GL_DEPTH_TEST)
+			glClearColor(0.2f, 0.3f, 0.8f, 0.0f)
 			glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT) // clear the framebuffer
 
 			f()
 
 			sync.sync(targetFPS)
 
-			val currentFrameTime: Long = System.nanoTime()
-			delta = (currentFrameTime - lastFrameTime) / 1000f
+			val currentFrameTime: Long = System.nanoTime() / 1000 / 1000
+			if (lastFrameTime < 0L)
+				delta = 0f
+			else
+				delta = (currentFrameTime - lastFrameTime) / 1000f
 			lastFrameTime = currentFrameTime
 
 			fps = (1 / delta).toInt()
