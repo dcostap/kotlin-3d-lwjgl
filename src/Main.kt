@@ -23,8 +23,8 @@ fun main(args: Array<String>) {
 	)
 
 	val entities = mapOf(
-//		mesh to Entity(mesh),
-		mesh2 to Entity(mesh2)
+		mesh to Entity(mesh),
+//		mesh2 to Entity(mesh2)
 	)
 
 	Display.render {
@@ -33,15 +33,15 @@ fun main(args: Array<String>) {
 		for ((mesh, ent) in entities) {
 			Shader.setMatrixUniform(
 				"transform_mat",
-				createTransformationMatrix(ent.position, ent.rotation.x, ent.rotation.y, ent.rotation.z, 0.1f)
+				createTransformationMatrix(ent.position, ent.rotation.x, ent.rotation.y, ent.rotation.z, 1f)
 			)
 			mesh.draw()
 		}
 
-//		println(Display.fps)
+		println(Display.fps)
 		Shader.stop()
 
-		entities.values.forEach { e -> e.position.x += Display.delta * 0.5f; println(e.position) }
+		entities.values.forEach { e -> e.position.z += Display.delta * 0.5f }
 	}
 	Display.destroy()
 	Shader.destroy()

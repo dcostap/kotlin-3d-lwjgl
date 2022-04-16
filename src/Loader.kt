@@ -14,7 +14,7 @@ fun loadObjFile(file: String): Mesh {
 			vertices.addAll(parts[1].toFloat(), parts[2].toFloat(), parts[3].toFloat())
 		} else if (parts[0] == "f") {
 			indices.addAll(parts[1].toInt(), parts[2].toInt(), parts[3].toInt())
-		}else if (parts[0] == "vn") {
+		} else if (parts[0] == "vn") {
 			normals.addAll(parts[1].toFloat(), parts[2].toFloat(), parts[3].toFloat())
 		}
 	}
